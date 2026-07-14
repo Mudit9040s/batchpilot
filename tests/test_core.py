@@ -131,9 +131,14 @@ def test_build_custom_profile_and_roundtrip():
     p = build_custom_profile("https://api.example.com/bulk", "post", "items",
                              "5000", "tok123", ["Email ID", "Order Qty"],
                              index_field="recordIndex")
-    assert p.batch_size == 1000  # clamped to a sane maximum
+    assert p.batch_size == 2000  # clamped to the FieldAssist-style maximum
     assert p.headers["Authorization"] == "Bearer tok123"
     assert p.method == "POST" and p.records_key == "items"
+    # Blank records key = bare JSON array body (base-script semantics)
+    p_bare = build_custom_profile("https://api.example.com/bulk", "POST", "",
+                                  "100", "", ["A"], auth_type="basic",
+                                  auth_user="u", auth_pass="pw", delay="1")
+    assert p_bare.records_key == "" and p_bare.delay == 1.0
     p2 = profile_from_dict(profile_to_dict(p))  # as persisted in job payloads
     assert p2.endpoint == p.endpoint
     assert p2.fields[0].type == "email"

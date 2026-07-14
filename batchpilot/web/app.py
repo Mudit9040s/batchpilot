@@ -132,8 +132,10 @@ def upload(request: Request,
                  profile_key: str = Form(""),
                  api_url: str = Form(""),
                  method: str = Form("POST"),
-                 records_key: str = Form("records"),
-                 batch_size: int = Form(50),
+                 records_key: str = Form(""),
+                 batch_size: int = Form(100),
+                 delay: float = Form(1.0),
+                 stringify: str | None = Form(None),
                  auth_type: str = Form("basic"),
                  auth_token: str = Form(""),
                  auth_user: str = Form(""),
@@ -227,12 +229,17 @@ def upload(request: Request,
             return templates.TemplateResponse(request, "index.html",
                                               _index_ctx(request, error=err),
                                               status_code=400)
+        if stringify:
+            # Base-script semantics (safe()): every value becomes a stripped
+            # string; blanks/nan become null.
+            rows = [{k: (None if v is None or str(v).strip() in ("", "nan", "None")
+                         else str(v).strip()) for k, v in r.items()} for r in rows]
         profile = build_custom_profile(api_url, method, records_key, batch_size,
                                        auth_token, headers, results_path,
                                        status_field, success_values,
                                        message_field, index_field,
                                        auth_type=auth_type, auth_user=auth_user,
-                                       auth_pass=auth_pass)
+                                       auth_pass=auth_pass, delay=delay)
     elif mode == "profile" and profile_key:
         profile = get_profile(profile_key)
     else:
@@ -265,20 +272,31 @@ def job_view(request: Request, job_id: str):
         return HTMLResponse("Job not found", status_code=404)
     p = job["payload"]
     profile = _job_profile(job)
+    raw = p.get("raw")
     rows_view = []
     for i, row in enumerate(p["rows"]):
         outcome = p["outcomes"][i] if p.get("outcomes") else None
         rows_view.append({"n": i + 1, "data": row, "issues": p["issues"][i],
                           "outcome": outcome,
+                          "row_json": json.dumps(raw[i] if raw else row, indent=2,
+                                                 ensure_ascii=False, default=str),
                           "has_error": any(x["severity"] == "error" for x in p["issues"][i])})
+    # Exact request body the API will receive (first records of the first batch)
+    if raw:
+        sample_payload = raw[0]
+        sample_note = "one request per JSON file — this is the body of request 1"
+    else:
+        first = p["rows"][:min(profile.batch_size, 3)]
+        sample_payload = {profile.records_key: first} if profile.records_key else first
+        sample_note = (f"bare JSON array, {profile.batch_size} records per request"
+                       if not profile.records_key else
+                       f"wrapped in '{profile.records_key}', {profile.batch_size} records per request")
     return templates.TemplateResponse(request, "job.html", {
         "job": job, "profile": profile, "headers": p["headers"],
         "rows": rows_view, "sent": job["status"] == "sent",
         "sending": job["status"] == "sending",
         "mode": p.get("mode", "profile"),
-        "sample_payload": (p["raw"][0] if p.get("raw")
-                           else ({profile.records_key: p["rows"][:2]}
-                                 if profile.records_key else p["rows"][:2])),
+        "sample_payload": sample_payload, "sample_note": sample_note,
     })
 
 

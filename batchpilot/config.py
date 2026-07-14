@@ -159,7 +159,8 @@ def build_custom_profile(endpoint: str, method: str, records_key: str,
                          success_values: str = "success,ok,accepted",
                          message_field: str = "message",
                          index_field: str = "", auth_type: str = "token",
-                         auth_user: str = "", auth_pass: str = "") -> Profile:
+                         auth_user: str = "", auth_pass: str = "",
+                         delay: float = 0.0) -> Profile:
     """Builds a Profile from the web form — no YAML required."""
     import base64
 
@@ -171,11 +172,18 @@ def build_custom_profile(endpoint: str, method: str, records_key: str,
     elif auth_type == "token" and auth_token.strip():
         hdrs["Authorization"] = (auth_token if auth_token.lower().startswith(("bearer ", "basic "))
                                  else f"Bearer {auth_token.strip()}")
+    try:
+        delay_val = max(0.0, min(float(delay or 0), 10.0))
+    except (TypeError, ValueError):
+        delay_val = 0.0
     return Profile(
         key="custom", name="Custom API (entered in UI)",
         endpoint=endpoint.strip(), method=method.upper(),
-        headers=hdrs, records_key=records_key.strip() or "records",
-        batch_size=max(1, min(int(batch_size or 50), 1000)),
+        # Blank records_key = bare JSON array body, exactly like the base
+        # Colab script (requests.post(..., data=json.dumps(batch))).
+        headers=hdrs, records_key=records_key.strip(),
+        batch_size=max(1, min(int(batch_size or 100), 2000)),
+        delay=delay_val,
         fields=infer_rules(headers),
         response_map=ResponseMap(
             results_path=results_path.strip() or "results",
