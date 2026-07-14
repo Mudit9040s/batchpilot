@@ -75,6 +75,9 @@ def test_rules_catch_errors():
     assert "duplicate" in codes2 and "type" in codes2
 
 
+BATCH3 = [{"email": "a@x.com"}, {"email": "b@x.com"}, {"email": "c@x.com"}]
+
+
 def test_partial_acceptance_parsing():
     p = make_profile()
     body = {"results": [
@@ -82,17 +85,37 @@ def test_partial_acceptance_parsing():
         {"index": 1, "status": "rejected", "message": "bad phone"},
         {"index": 2, "status": "accepted", "message": ""},
     ]}
-    out = parse_batch_response(p, body, 3, http_ok=True)
+    out = parse_batch_response(p, body, BATCH3, http_ok=True)
     assert [o["status"] for o in out] == ["success", "failed", "success"]
     assert out[1]["message"] == "bad phone"
 
 
 def test_whole_batch_fallback():
     p = make_profile()
-    out = parse_batch_response(p, {"error": "server exploded"}, 2, http_ok=False)
+    out = parse_batch_response(p, {"error": "server exploded"}, BATCH3[:2], http_ok=False)
     assert all(o["status"] == "failed" for o in out)
-    out_ok = parse_batch_response(p, {"acknowledged": True}, 2, http_ok=True)
+    out_ok = parse_batch_response(p, {"acknowledged": True}, BATCH3[:2], http_ok=True)
     assert all(o["status"] == "success" for o in out_ok)
+
+
+def test_fieldassist_style_response():
+    """FieldAssist ApiResponse: ResponseList holds only ERRORS keyed by ERPId;
+    rows absent from it were accepted."""
+    p = make_profile(response_map=ResponseMap(
+        results_path="ResponseList", status_field="ResponseStatus",
+        success_values=["success", "updated", "created"],
+        message_field="Message", match_field="ERPId",
+        record_field="OutletErpId", missing_means="success"))
+    batch = [{"OutletErpId": "O1", "OutletName": "Shop A"},
+             {"OutletErpId": "O2", "OutletName": "Shop B"},
+             {"OutletErpId": "O3", "OutletName": "Shop C"}]
+    body = {"Message": "done", "Response": "PartialSuccess",
+            "ResponseList": [{"ERPId": "O2", "Message": "Beat not found",
+                              "ResponseStatus": "Failure", "GUID": "g2"}],
+            "ResponseStatusCount": {"Updated": 2, "Failed": 1, "Total": 3}}
+    out = parse_batch_response(p, body, batch, http_ok=True)
+    assert [o["status"] for o in out] == ["success", "failed", "success"]
+    assert out[1]["message"] == "Beat not found"
 
 
 def test_infer_rules_from_headers():
