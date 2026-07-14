@@ -53,7 +53,13 @@ class ResponseMap:
     status_field: str = "status"         # field inside each result holding the outcome
     success_values: list = field(default_factory=lambda: ["success", "ok", "accepted"])
     message_field: str = "message"       # field with the human-readable reason
-    index_field: str | None = None       # optional field carrying the record index/id
+    index_field: str | None = None       # optional field carrying the record index
+    # Value-based matching (e.g. FieldAssist keys results by ERPId, not index):
+    match_field: str | None = None       # field in each RESULT item (e.g. "ERPId")
+    record_field: str | None = None      # field in each SENT record (e.g. "OutletErpId")
+    # What to assume for rows absent from the results list. FieldAssist's
+    # ResponseList contains only errors, so absent = accepted → "success".
+    missing_means: str = "unknown"       # unknown | success | failed
 
 
 @dataclass
@@ -81,13 +87,22 @@ def load_profile(path: Path) -> Profile:
     raw = _substitute_env(raw)
     fields = [FieldRule(**f) for f in raw.get("fields", [])]
     rm = ResponseMap(**raw.get("response_map", {}))
+    headers = dict(raw.get("headers", {}))
+    # Optional friendly auth block:  auth: {type: basic, username: ..., password: ...}
+    auth = raw.get("auth") or {}
+    if str(auth.get("type", "")).lower() == "basic" and auth.get("username"):
+        import base64
+        cred = base64.b64encode(
+            f"{auth['username']}:{auth.get('password', '')}".encode()).decode()
+        headers["Authorization"] = f"Basic {cred}"
     return Profile(
         key=path.stem,
         name=raw.get("name", path.stem),
         endpoint=raw["endpoint"],
         method=raw.get("method", "POST"),
-        headers=raw.get("headers", {}),
-        records_key=raw.get("records_key", "records"),
+        headers=headers,
+        # records_key: "" (empty) means the body is a bare JSON array of records
+        records_key=raw.get("records_key", "records") or "",
         batch_size=int(raw.get("batch_size", 50)),
         max_retries=int(raw.get("max_retries", 3)),
         timeout=float(raw.get("timeout", 30.0)),
@@ -141,10 +156,17 @@ def build_custom_profile(endpoint: str, method: str, records_key: str,
                          results_path: str = "results", status_field: str = "status",
                          success_values: str = "success,ok,accepted",
                          message_field: str = "message",
-                         index_field: str = "") -> Profile:
+                         index_field: str = "", auth_type: str = "token",
+                         auth_user: str = "", auth_pass: str = "") -> Profile:
     """Builds a Profile from the web form — no YAML required."""
+    import base64
+
     hdrs = {"Content-Type": "application/json"}
-    if auth_token.strip():
+    if auth_type == "basic" and auth_user.strip():
+        cred = base64.b64encode(
+            f"{auth_user.strip()}:{auth_pass}".encode()).decode()
+        hdrs["Authorization"] = f"Basic {cred}"
+    elif auth_type == "token" and auth_token.strip():
         hdrs["Authorization"] = (auth_token if auth_token.lower().startswith(("bearer ", "basic "))
                                  else f"Bearer {auth_token.strip()}")
     return Profile(
