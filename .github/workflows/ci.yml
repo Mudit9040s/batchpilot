@@ -20,3 +20,9 @@ jobs:
           uvicorn batchpilot.web.app:app --port 8000 &
           sleep 3
           curl -sf http://127.0.0.1:8000/health
+          # The root page must redirect to /login (302/303), never 500.
+          code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/)
+          echo "GET / -> $code"
+          test "$code" = "303" -o "$code" = "302"
+          # And the login page itself must render.
+          curl -sf http://127.0.0.1:8000/login > /dev/null
