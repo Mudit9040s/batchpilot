@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.templating import Jinja2Templates
 
 import ipaddress
+import json
 import socket
 from urllib.parse import urlparse
 
@@ -133,7 +134,11 @@ def upload(request: Request,
                  method: str = Form("POST"),
                  records_key: str = Form("records"),
                  batch_size: int = Form(50),
+                 auth_type: str = Form("basic"),
                  auth_token: str = Form(""),
+                 auth_user: str = Form(""),
+                 auth_pass: str = Form(""),
+                 field_map: str = Form(""),
                  results_path: str = Form("results"),
                  status_field: str = Form("status"),
                  success_values: str = Form("success,ok,accepted"),
@@ -155,6 +160,18 @@ def upload(request: Request,
             _index_ctx(request, error="No data rows found in the file."),
             status_code=400)
 
+    # Apply the user's column→API-field mapping (Custom API advanced table).
+    # Renames keys; a blank target means "don't send this column at all".
+    if mode == "custom" and field_map.strip():
+        try:
+            fmap = {str(k): str(v).strip() for k, v in json.loads(field_map).items()}
+        except (ValueError, AttributeError):
+            fmap = {}
+        if fmap:
+            headers = [fmap.get(h, h) for h in headers if fmap.get(h, h) != ""]
+            rows = [{fmap.get(k, k): v for k, v in r.items() if fmap.get(k, k) != ""}
+                    for r in rows]
+
     if mode == "custom":
         err = _url_error(api_url)
         if err:
@@ -164,7 +181,9 @@ def upload(request: Request,
         profile = build_custom_profile(api_url, method, records_key, batch_size,
                                        auth_token, headers, results_path,
                                        status_field, success_values,
-                                       message_field, index_field)
+                                       message_field, index_field,
+                                       auth_type=auth_type, auth_user=auth_user,
+                                       auth_pass=auth_pass)
     elif mode == "profile" and profile_key:
         profile = get_profile(profile_key)
     else:
@@ -208,7 +227,8 @@ def job_view(request: Request, job_id: str):
         "rows": rows_view, "sent": job["status"] == "sent",
         "sending": job["status"] == "sending",
         "mode": p.get("mode", "profile"),
-        "sample_payload": {profile.records_key: p["rows"][:2]},
+        "sample_payload": ({profile.records_key: p["rows"][:2]}
+                           if profile.records_key else p["rows"][:2]),
     })
 
 
