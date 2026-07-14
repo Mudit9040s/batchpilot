@@ -6,7 +6,7 @@ description: Creates new outlets (name, beat, address, market, city…). Max 200
 endpoint: https://api.fieldassist.in/api/V3/Outlet/CreateMultiple
 method: POST
 records_key: ""          # FieldAssist expects a bare JSON array
-batch_size: 1000
+batch_size: 100
 timeout: 60
 
 auth:
