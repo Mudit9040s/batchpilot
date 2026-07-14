@@ -1,0 +1,77 @@
+# FieldAssist V3 — bulk outlet creation
+# Docs: https://api.fieldassist.in/Help/Api/POST-api-V3-Outlet-CreateMultiple
+# Set FA_USERNAME / FA_PASSWORD env vars with your FieldAssist API credentials.
+name: FieldAssist · Outlet create (multiple)
+description: Creates new outlets (name, beat, address, market, city…). Max 2000 per request. Per-row results by ERPId.
+endpoint: https://api.fieldassist.in/api/V3/Outlet/CreateMultiple
+method: POST
+records_key: ""          # FieldAssist expects a bare JSON array
+batch_size: 1000
+timeout: 60
+
+auth:
+  type: basic
+  username: ${FA_USERNAME}
+  password: ${FA_PASSWORD}
+
+fields:
+  - name: OutletErpId
+    unique: true
+  - name: OutletName
+    required: true
+    max_length: 100
+  - name: Beat
+    required: true
+  - name: Address
+    required: true
+    max_length: 1000
+  - name: MarketName
+    required: true
+    max_length: 50
+  - name: City
+    required: true
+    max_length: 50
+  - name: State
+    max_length: 50
+  - name: SubCity
+    max_length: 200
+  - name: RouteErpId
+    max_length: 100
+  - name: ShopType
+    max_length: 50
+  - name: OwnersName
+    max_length: 200
+  - name: OwnersNo
+    type: phone
+    max_length: 20
+  - name: Email
+    type: email
+    max_length: 100
+  - name: PinCode
+    regex: "^[1-9]\\d{3,5}$"
+  - name: GSTIN
+    max_length: 20
+  - name: PAN
+    regex: "^[a-zA-Z0-9]{10}$"
+  - name: Aadhar
+    regex: "^[0-9]{12}$"
+  - name: FSSAINumber
+    regex: "^.{14}$"
+  - name: Latitude
+    type: number
+  - name: Longitude
+    type: number
+  - name: TotalPotential
+    type: number
+    min: 0
+
+# FieldAssist returns ApiResponse: ResponseList holds ERRORS keyed by ERPId;
+# rows absent from it were accepted (missing_means: success).
+response_map:
+  results_path: ResponseList
+  status_field: ResponseStatus
+  success_values: [success, updated, created]
+  message_field: Message
+  match_field: ERPId
+  record_field: OutletErpId
+  missing_means: success
