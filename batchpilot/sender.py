@@ -92,6 +92,29 @@ def send_all(profile: Profile, rows: list[dict],
             outcomes.extend(parse_batch_response(profile, resp_body, batch, http_ok))
             if progress_cb:
                 progress_cb(min(start + profile.batch_size, len(rows)), len(rows))
+            if profile.delay and start + profile.batch_size < len(rows):
+                time.sleep(profile.delay)
+    return outcomes
+
+
+def send_payload_files(profile: Profile, payloads: list,
+                       progress_cb=None) -> list[dict]:
+    """JSON-files workflow: one request PER payload (like the Colab GRN script).
+    Body is the payload itself, or {records_key: [payload]} if a key is set."""
+    import httpx
+
+    outcomes: list[dict] = []
+    with httpx.Client(timeout=profile.timeout) as client:
+        for i, payload in enumerate(payloads):
+            body = {profile.records_key: [payload]} if profile.records_key else payload
+            resp_body, http_ok = _send_with_retry(client, profile, body)
+            msg = "" if http_ok else str(resp_body)[:300]
+            outcomes.append({"status": "success" if http_ok else "failed",
+                             "message": msg})
+            if progress_cb:
+                progress_cb(i + 1, len(payloads))
+            if profile.delay and i < len(payloads) - 1:
+                time.sleep(profile.delay)
     return outcomes
 
 

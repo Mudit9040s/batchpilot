@@ -1,0 +1,36 @@
+# Template for a REAL target API. Copy, rename, and adjust.
+# Secrets come from environment variables via ${VAR} — never hardcode tokens.
+name: Example CRM bulk contacts
+description: Bulk-upserts contacts into an example CRM.
+endpoint: https://api.example.com/v2/contacts/bulk
+method: POST
+records_key: contacts          # request body becomes {"contacts": [...]}
+batch_size: 100
+max_retries: 3
+timeout: 30
+
+headers:
+  Authorization: Bearer ${TARGET_API_TOKEN}
+  Content-Type: application/json
+
+fields:
+  - name: firstName
+    required: true
+    max_length: 60
+  - name: email
+    required: true
+    type: email
+    unique: true
+  - name: phoneNumber
+    type: phone
+  - name: signupDate
+    type: date
+
+# How to read per-record outcomes from a partial-acceptance response like:
+# {"data": {"items": [{"recordIndex": 0, "state": "ok", "error": null}, ...]}}
+response_map:
+  results_path: data.items
+  status_field: state
+  success_values: [ok, created, updated]
+  message_field: error
+  index_field: recordIndex

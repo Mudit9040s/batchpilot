@@ -19,10 +19,10 @@ from .. import __version__
 from ..ai_validate import ai_available, validate_with_ai
 from ..config import (build_custom_profile, get_profile, list_profiles,
                       profile_from_dict, profile_to_dict)
-from ..ingest import read_rows
+from ..ingest import is_payload_file, read_payload_files, read_rows
 from ..report import write_report
 from ..rules import validate_rows
-from ..sender import send_all
+from ..sender import send_all, send_payload_files
 from .. import store
 
 app = FastAPI(title="BatchPilot", version=__version__)
@@ -148,6 +148,55 @@ def upload(request: Request,
     # Sync handler on purpose: FastAPI runs it in the threadpool, so slow
     # validation of one user's big file never blocks other users.
     data = file.file.read()
+
+    # JSON-files workflow: a .json (object/array) or a .zip of .json payloads.
+    # Each payload is sent as ONE request (like the Colab GRN/invoice scripts).
+    raw_payloads = None
+    if is_payload_file(file.filename or ""):
+        try:
+            items = read_payload_files(data, file.filename or "upload.json")
+        except Exception:
+            items = []
+        if not items:
+            return templates.TemplateResponse(
+                request, "index.html",
+                _index_ctx(request, error="No JSON payloads found in the file."),
+                status_code=400)
+        headers = ["File", "Top-level keys"]
+        rows = []
+        issues = []
+        raw_payloads = []
+        for it in items:
+            keys = (", ".join(list(it["payload"].keys())[:8])
+                    if isinstance(it["payload"], dict) else "(not an object)")
+            rows.append({"File": it["name"], "Top-level keys": keys})
+            issues.append([{"field": "File", "code": "json",
+                            "message": it["error"], "severity": "error"}]
+                          if it["error"] else [])
+            raw_payloads.append(it["payload"])
+        if mode == "custom":
+            err = _url_error(api_url)
+            if err:
+                return templates.TemplateResponse(request, "index.html",
+                                                  _index_ctx(request, error=err),
+                                                  status_code=400)
+            profile = build_custom_profile(api_url, method, records_key, batch_size,
+                                           auth_token, [], results_path,
+                                           status_field, success_values,
+                                           message_field, index_field,
+                                           auth_type=auth_type, auth_user=auth_user,
+                                           auth_pass=auth_pass)
+        elif mode == "profile" and profile_key:
+            profile = get_profile(profile_key)
+        else:
+            mode = "playground"
+            profile = get_profile("demo")
+        job_id = store.create_job(profile.key, file.filename or "upload", headers,
+                                  rows, issues, False,
+                                  profile_dict=profile_to_dict(profile), mode=mode,
+                                  raw_payloads=raw_payloads)
+        return RedirectResponse(f"/job/{job_id}", status_code=303)
+
     try:
         headers, rows = read_rows(data, file.filename or "upload.xlsx")
     except ValueError as e:
@@ -227,8 +276,9 @@ def job_view(request: Request, job_id: str):
         "rows": rows_view, "sent": job["status"] == "sent",
         "sending": job["status"] == "sending",
         "mode": p.get("mode", "profile"),
-        "sample_payload": ({profile.records_key: p["rows"][:2]}
-                           if profile.records_key else p["rows"][:2]),
+        "sample_payload": (p["raw"][0] if p.get("raw")
+                           else ({profile.records_key: p["rows"][:2]}
+                                 if profile.records_key else p["rows"][:2])),
     })
 
 
@@ -253,7 +303,11 @@ def job_send(job_id: str, skip_errors: str | None = Form(None),
     outcomes_all = [{"status": "skipped", "message": "held back (validation errors)"}
                     for _ in rows]
     if send_idx:
-        sent_outcomes = send_all(profile, [rows[i] for i in send_idx])
+        raw = p.get("raw")
+        if raw:  # JSON-files workflow: one request per payload
+            sent_outcomes = send_payload_files(profile, [raw[i] for i in send_idx])
+        else:
+            sent_outcomes = send_all(profile, [rows[i] for i in send_idx])
         for pos, i in enumerate(send_idx):
             outcomes_all[i] = sent_outcomes[pos]
 

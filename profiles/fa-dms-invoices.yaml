@@ -1,0 +1,23 @@
+# FieldAssist DMS — sales invoice upload (JSON files workflow)
+# Mirrors the Colab "GRN Update" script: upload a .zip of per-invoice .json
+# files (or one .json); each payload is sent as ONE request.
+# Set FA_DMS_USERNAME / FA_DMS_PASSWORD env vars with your DMS API credentials.
+name: FieldAssist DMS · Invoice upload (JSON/ZIP)
+description: POST each invoice JSON to salesinvoice/SaveInvoicesV2, one per request, 0.3s apart. Upload a .zip of .json files.
+endpoint: https://api-dms.fieldassist.io/api/salesinvoice/SaveInvoicesV2
+method: POST
+records_key: ""          # body is the bare invoice object itself
+batch_size: 1
+timeout: 120
+delay: 0.3               # matches the Colab script's pause between calls
+
+auth:
+  type: basic
+  username: ${FA_DMS_USERNAME}
+  password: ${FA_DMS_PASSWORD}
+
+# No tabular field rules — payloads are pre-built JSON documents.
+fields: []
+
+response_map:
+  results_path: results

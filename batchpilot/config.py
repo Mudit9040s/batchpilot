@@ -73,6 +73,7 @@ class Profile:
     batch_size: int = 50
     max_retries: int = 3
     timeout: float = 30.0
+    delay: float = 0.0            # polite pause (seconds) between requests
     fields: list[FieldRule] = field(default_factory=list)
     response_map: ResponseMap = field(default_factory=ResponseMap)
     description: str = ""
@@ -106,6 +107,7 @@ def load_profile(path: Path) -> Profile:
         batch_size=int(raw.get("batch_size", 50)),
         max_retries=int(raw.get("max_retries", 3)),
         timeout=float(raw.get("timeout", 30.0)),
+        delay=float(raw.get("delay", 0.0)),
         fields=fields,
         response_map=rm,
         description=raw.get("description", ""),

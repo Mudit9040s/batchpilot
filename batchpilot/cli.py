@@ -58,7 +58,8 @@ def main(argv=None) -> int:
         batch = rows[:profile.batch_size]
         print(f"\nDry run — first batch payload ({len(batch)} records) for "
               f"{profile.method} {profile.endpoint}:")
-        print(json.dumps({profile.records_key: batch}, indent=2, default=str))
+        payload = {profile.records_key: batch} if profile.records_key else batch
+        print(json.dumps(payload, indent=2, default=str))
         return 0
 
     outcomes = None

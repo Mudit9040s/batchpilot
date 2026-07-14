@@ -69,13 +69,13 @@ def claim_send(job_id: str) -> bool:
 
 def create_job(profile_key: str, filename: str, headers: list, rows: list,
                issues: list, ai_used: bool, profile_dict: dict | None = None,
-               mode: str = "profile") -> str:
+               mode: str = "profile", raw_payloads: list | None = None) -> str:
     job_id = uuid.uuid4().hex[:12]
     err = sum(1 for lst in issues if any(i["severity"] == "error" for i in lst))
     warn = sum(1 for lst in issues if lst and not any(i["severity"] == "error" for i in lst))
     payload = json.dumps({"headers": headers, "rows": rows, "issues": issues,
                           "outcomes": None, "profile": profile_dict,
-                          "mode": mode}, default=str)
+                          "mode": mode, "raw": raw_payloads}, default=str)
     with _conn() as c:
         c.execute(
             "INSERT INTO jobs (id, created_at, profile_key, filename, total_rows,"

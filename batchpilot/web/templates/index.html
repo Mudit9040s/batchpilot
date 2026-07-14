@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <div class="max-w-2xl mx-auto">
   <h1 class="text-3xl font-bold mb-1">Push a spreadsheet to an API — safely.</h1>
   <p class="text-slate-400 mb-6">Upload → validate (rules + AI) → review → send in batches → per-row Excel report. No coding needed.</p>
@@ -12,10 +13,11 @@
         class="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
 
     <div>
-      <label class="block text-sm font-medium mb-1">1 · Spreadsheet (.xlsx / .csv / .tsv)</label>
-      <input type="file" name="file" required accept=".xlsx,.csv,.tsv"
+      <label class="block text-sm font-medium mb-1">1 · Data file (.xlsx / .csv / .tsv / .json / .zip)</label>
+      <input type="file" name="file" required accept=".xlsx,.csv,.tsv,.json,.zip"
              class="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-sky-600 file:px-4 file:py-2 file:text-white hover:file:bg-sky-500">
-      <p class="text-xs text-slate-500 mt-1">Row 1 must be headers; they map directly to JSON keys.</p>
+      <p class="text-xs text-slate-500 mt-1">Spreadsheets: row 1 = headers, mapped to JSON keys.
+      JSON or a ZIP of .json files (e.g. invoices): each payload is sent as one request.</p>
     </div>
 
     <div>
@@ -64,11 +66,35 @@
                  class="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-2 text-sm">
         </div>
       </div>
-      <div>
-        <label class="block text-xs font-medium mb-1">Auth token <span class="text-slate-500">(optional — sent as Bearer; never stored)</span></label>
-        <input type="password" name="auth_token" placeholder="paste token"
-               class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm">
+      <input type="hidden" name="auth_type" value="basic">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium mb-1">API username *</label>
+          <input type="text" name="auth_user" autocomplete="off"
+                 class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">API password *</label>
+          <input type="password" name="auth_pass" autocomplete="new-password"
+                 class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm">
+        </div>
       </div>
+      <p class="text-xs text-slate-500">Credentials are used only for this upload — never stored.</p>
+
+      <details id="mapDetails" class="text-xs text-slate-400">
+        <summary class="cursor-pointer hover:text-white font-medium">Advanced: map file columns → API field names</summary>
+        <p id="mapHint" class="mt-2">Choose a file above and its columns will appear here automatically.</p>
+        <table id="mapTable" class="mt-2 w-full">
+          <thead>
+            <tr class="text-left text-slate-500">
+              <th class="px-2 py-1">Column in your file</th>
+              <th class="px-2 py-1">Send to API as <span class="font-normal">(leave blank to skip the column)</span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </details>
+      <input type="hidden" name="field_map" id="fieldMap">
       <details class="text-xs text-slate-400">
         <summary class="cursor-pointer hover:text-white font-medium">Advanced: how to read per-row results from the response</summary>
         <div class="mt-3 grid grid-cols-2 gap-3">
@@ -132,5 +158,50 @@
   }
   tabs.forEach(t => t.addEventListener('change', refresh));
   refresh();
+
+  // ---- Field-mapping table: pre-read the file's header row in the browser ----
+  const fileInput = document.querySelector('input[name="file"]');
+  const mapBody = document.querySelector('#mapTable tbody');
+  const mapHint = document.getElementById('mapHint');
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  function populateMap(headers) {
+    mapBody.innerHTML = '';
+    headers.forEach(h => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td class="px-2 py-1 text-slate-300">' + esc(h) + '</td>' +
+        '<td class="px-2 py-1"><input data-src="' + esc(h) + '" value="' + esc(h) + '"' +
+        ' class="w-full rounded border border-slate-700 bg-slate-800 px-2 py-1"></td>';
+      mapBody.appendChild(tr);
+    });
+    mapHint.classList.toggle('hidden', headers.length > 0);
+    if (headers.length) document.getElementById('mapDetails').open = true;
+  }
+
+  fileInput.addEventListener('change', async () => {
+    const f = fileInput.files[0];
+    if (!f) return;
+    try {
+      if (/\.(csv|tsv)$/i.test(f.name)) {
+        const line = (await f.text()).split(/\r?\n/)[0] || '';
+        const delim = /\.tsv$/i.test(f.name) ? '\t' : ',';
+        populateMap(line.split(delim).map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean));
+      } else {
+        const buf = await f.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+        populateMap((rows[0] || []).map(x => String(x).trim()).filter(Boolean));
+      }
+    } catch (e) { /* mapping is optional — ignore unreadable files */ }
+  });
+
+  document.querySelector('form[action="/upload"]').addEventListener('submit', () => {
+    const m = {};
+    mapBody.querySelectorAll('input[data-src]').forEach(i => {
+      if (i.value.trim() !== i.dataset.src) m[i.dataset.src] = i.value.trim();
+    });
+    document.getElementById('fieldMap').value = Object.keys(m).length ? JSON.stringify(m) : '';
+  });
 </script>
 {% endblock %}

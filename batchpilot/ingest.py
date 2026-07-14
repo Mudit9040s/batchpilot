@@ -4,9 +4,53 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import os
+import zipfile
 from pathlib import Path
 
 from openpyxl import load_workbook
+
+PAYLOAD_EXTENSIONS = (".json", ".zip")
+
+
+def is_payload_file(filename: str) -> bool:
+    return filename.lower().endswith(PAYLOAD_EXTENSIONS)
+
+
+def read_payload_files(data: bytes, filename: str) -> list[dict]:
+    """For the JSON-files workflow (e.g. per-invoice payloads): a .json file
+    (single object or array) or a .zip of .json files.
+    Returns [{"name", "payload", "error"}] — payload is the parsed JSON."""
+    name = filename.lower()
+    out: list[dict] = []
+    if name.endswith(".json"):
+        try:
+            obj = json.loads(data.decode("utf-8-sig"))
+            if isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    out.append({"name": f"{filename} #{i + 1}", "payload": item,
+                                "error": None})
+            else:
+                out.append({"name": filename, "payload": obj, "error": None})
+        except ValueError as e:
+            out.append({"name": filename, "payload": None,
+                        "error": f"invalid JSON: {e}"})
+        return out
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        for member in sorted(z.namelist()):
+            base = os.path.basename(member)
+            if (not member.lower().endswith(".json") or member.startswith("__MACOSX")
+                    or base.startswith(".")):
+                continue
+            try:
+                out.append({"name": base,
+                            "payload": json.loads(z.read(member).decode("utf-8-sig")),
+                            "error": None})
+            except ValueError as e:
+                out.append({"name": base, "payload": None,
+                            "error": f"invalid JSON: {e}"})
+    return out
 
 
 def _clean(value):
