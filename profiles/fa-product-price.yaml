@@ -1,0 +1,56 @@
+# FieldAssist V3 — bulk product price update
+# Docs: https://api.fieldassist.in/Help/Api/POST-api-V3-Product-UpdatePrice
+# Spreadsheet columns must match the field names below (or use Custom API
+# mode's mapping table first to check names).
+# Set FA_USERNAME / FA_PASSWORD env vars with your FieldAssist API credentials.
+name: FieldAssist · Product price update
+description: Uploads product prices (PTR/PTD/MRP…) by ProductERPId. Max 2000 per request.
+endpoint: https://api.fieldassist.in/api/V3/Product/UpdatePrice
+method: POST
+records_key: ""          # FieldAssist expects a bare JSON array
+batch_size: 1000
+timeout: 60
+
+auth:
+  type: basic
+  username: ${FA_USERNAME}
+  password: ${FA_PASSWORD}
+
+fields:
+  - name: ProductERPId
+    required: true
+    max_length: 50
+    unique: true
+  - name: Price
+    type: number
+    min: 0
+  - name: PTD
+    type: number
+    min: 0
+  - name: MRP
+    type: number
+    min: 0
+  - name: Display_MRP
+  - name: PTRMT
+    type: number
+    min: 0
+  - name: PTDSuper
+    type: number
+    min: 0
+  - name: PTDSub
+    type: number
+    min: 0
+  - name: PTRDelta
+    type: number
+
+# FieldAssist's ApiResponse lists errors keyed by ERPId; rows absent from
+# ResponseList were accepted. Falls back to whole-batch outcome if the
+# response has no ResponseList.
+response_map:
+  results_path: ResponseList
+  status_field: ResponseStatus
+  success_values: [success, updated, created]
+  message_field: Message
+  match_field: ERPId
+  record_field: ProductERPId
+  missing_means: success
