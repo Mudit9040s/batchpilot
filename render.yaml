@@ -1,0 +1,12 @@
+# Render.com blueprint — deploy with one click after connecting the repo.
+services:
+  - type: web
+    name: batchpilot
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false        # set in Render dashboard (optional; enables AI validation)
+      - key: TARGET_API_TOKEN
+        sync: false        # set if your real profile needs it

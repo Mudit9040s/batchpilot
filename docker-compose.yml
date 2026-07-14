@@ -1,0 +1,14 @@
+services:
+  batchpilot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - BATCHPILOT_USERNAME=${BATCHPILOT_USERNAME:-admin}
+      - BATCHPILOT_PASSWORD=${BATCHPILOT_PASSWORD:-batchpilot}
+      - BATCHPILOT_SECRET=${BATCHPILOT_SECRET:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - TARGET_API_TOKEN=${TARGET_API_TOKEN:-}
+    volumes:
+      - ./data:/app/data          # persists job history + reports
+      - ./profiles:/app/profiles  # edit profiles without rebuilding
