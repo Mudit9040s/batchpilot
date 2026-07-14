@@ -41,11 +41,6 @@ AUTH_USER = os.environ.get("BATCHPILOT_USERNAME", "admin")
 AUTH_PASS = os.environ.get("BATCHPILOT_PASSWORD", "batchpilot")
 USING_DEFAULT_CREDS = "BATCHPILOT_PASSWORD" not in os.environ
 
-app.add_middleware(SessionMiddleware,
-                   secret_key=os.environ.get("BATCHPILOT_SECRET")
-                   or _secrets.token_hex(32),
-                   max_age=60 * 60 * 12)  # 12h sessions
-
 # Paths reachable without login. /mock/ingest stays open: it is the fake demo
 # API and is called server-to-server (no cookies) by the sender.
 _PUBLIC_PATHS = ("/login", "/health", "/mock/ingest")
@@ -57,6 +52,15 @@ async def require_login(request: Request, call_next):
     if path not in _PUBLIC_PATHS and not request.session.get("user"):
         return RedirectResponse(f"/login?next={path}", status_code=303)
     return await call_next(request)
+
+
+# IMPORTANT: added AFTER require_login. In Starlette the middleware added
+# last runs first, so SessionMiddleware must be registered last to have
+# request.session ready before the login check reads it.
+app.add_middleware(SessionMiddleware,
+                   secret_key=os.environ.get("BATCHPILOT_SECRET")
+                   or _secrets.token_hex(32),
+                   max_age=60 * 60 * 12)  # 12h sessions
 
 
 @app.get("/login", response_class=HTMLResponse)
