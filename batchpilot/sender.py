@@ -18,29 +18,48 @@ def _dig(obj: Any, dot_path: str):
     return cur
 
 
-def parse_batch_response(profile: Profile, body: Any, batch_len: int,
+def parse_batch_response(profile: Profile, body: Any, batch: list[dict],
                          http_ok: bool) -> list[dict]:
     """Returns one outcome per record in the batch:
     {"status": "success"|"failed", "message": str}
-    Handles: per-record results (partial acceptance), or whole-batch outcomes.
+    Handles per-record results matched by index OR by a record value (e.g.
+    FieldAssist returns errors keyed by ERPId), plus whole-batch outcomes.
     """
     rm = profile.response_map
+    batch_len = len(batch)
     results = _dig(body, rm.results_path) if isinstance(body, (dict, list)) else None
     if isinstance(body, list) and results is None:
         results = body  # API returns a bare list of per-record results
 
     if isinstance(results, list) and results:
-        outcomes = [{"status": "unknown", "message": "no result returned"}
+        default = rm.missing_means if (http_ok and rm.missing_means != "unknown") \
+            else "unknown"
+        default_msg = "" if default == "success" else "no result returned"
+        outcomes = [{"status": default, "message": default_msg}
                     for _ in range(batch_len)]
+
+        # Optional value-based lookup: sent-record field ↔ result-item field.
+        by_value: dict[str, list[int]] = {}
+        if rm.match_field and rm.record_field:
+            for i, rec in enumerate(batch):
+                v = str(rec.get(rm.record_field, "")).strip()
+                by_value.setdefault(v, []).append(i)
+
         for pos, item in enumerate(results):
             if not isinstance(item, dict):
                 continue
-            idx = pos
-            if rm.index_field and rm.index_field in item:
-                try:
-                    idx = int(item[rm.index_field])
-                except (TypeError, ValueError):
-                    idx = pos
+            idx = None
+            if rm.match_field and rm.record_field and rm.match_field in item:
+                candidates = by_value.get(str(item[rm.match_field]).strip())
+                if candidates:
+                    idx = candidates.pop(0)
+            if idx is None:
+                idx = pos
+                if rm.index_field and rm.index_field in item:
+                    try:
+                        idx = int(item[rm.index_field])
+                    except (TypeError, ValueError):
+                        idx = pos
             if not 0 <= idx < batch_len:
                 continue
             status_raw = str(item.get(rm.status_field, "")).lower()
@@ -67,9 +86,10 @@ def send_all(profile: Profile, rows: list[dict],
     with httpx.Client(timeout=profile.timeout) as client:
         for start in range(0, len(rows), profile.batch_size):
             batch = rows[start:start + profile.batch_size]
-            body = {profile.records_key: batch}
+            # Empty records_key → API expects a bare JSON array (e.g. FieldAssist)
+            body = {profile.records_key: batch} if profile.records_key else batch
             resp_body, http_ok = _send_with_retry(client, profile, body)
-            outcomes.extend(parse_batch_response(profile, resp_body, len(batch), http_ok))
+            outcomes.extend(parse_batch_response(profile, resp_body, batch, http_ok))
             if progress_cb:
                 progress_cb(min(start + profile.batch_size, len(rows)), len(rows))
     return outcomes
