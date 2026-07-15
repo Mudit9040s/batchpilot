@@ -345,6 +345,18 @@ def job_report(job_id: str):
                         filename=f"batchpilot_{safe_name}_{job_id}.xlsx")
 
 
+_GUIDE_PATH = Path(__file__).resolve().parents[2] / "docs" / "index.html"
+
+
+@app.get("/guide", response_class=HTMLResponse)
+def guide():
+    """In-app user guide (login-protected, same file as the public docs/)."""
+    if _GUIDE_PATH.exists():
+        return FileResponse(_GUIDE_PATH, media_type="text/html")
+    return HTMLResponse("Guide not found — docs/index.html missing from the deployment.",
+                        status_code=404)
+
+
 @app.get("/history", response_class=HTMLResponse)
 def history(request: Request):
     return templates.TemplateResponse(request, "history.html",

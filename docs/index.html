@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BatchPilot – User Guide</title>
+<style>
+  :root{--bg:#0b1120;--panel:#111a2e;--border:#233047;--text:#e2e8f0;--muted:#94a3b8;
+        --accent:#38bdf8;--accent2:#6366f1;--green:#34d399;--amber:#fbbf24;--red:#f87171}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--text);line-height:1.6}
+  a{color:var(--accent);text-decoration:none}
+  .layout{display:flex;min-height:100vh}
+  nav{width:270px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
+      padding:24px 16px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  nav .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;margin-bottom:6px}
+  nav .logo span{display:inline-flex;width:30px;height:30px;border-radius:9px;align-items:center;
+      justify-content:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  nav .sub{font-size:11px;color:var(--muted);margin-bottom:20px}
+  nav h4{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:18px 0 6px}
+  nav a{display:block;padding:6px 10px;border-radius:8px;font-size:13.5px;color:var(--text)}
+  nav a:hover{background:#1b2740}
+  main{flex:1;max-width:900px;padding:40px 48px 80px}
+  h1{font-size:34px;margin-bottom:8px}
+  h2{font-size:24px;margin:56px 0 6px;scroll-margin-top:20px}
+  h3{font-size:17px;margin:28px 0 8px}
+  .lede{color:var(--muted);font-size:16px;margin-bottom:18px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
+  .chip{background:#1b2740;border:1px solid var(--border);padding:6px 12px;border-radius:999px;font-size:12.5px}
+  .steps{counter-reset:s;display:grid;gap:10px;margin:16px 0}
+  .step{display:flex;gap:14px;background:var(--panel);border:1px solid var(--border);
+        border-radius:14px;padding:14px 16px}
+  .step:before{counter-increment:s;content:counter(s);flex-shrink:0;width:28px;height:28px;
+        border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));
+        color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  .step b{display:block}
+  .step small{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  code{background:#1b2740;padding:2px 6px;border-radius:6px}
+  pre{background:#0a0f1c;border:1px solid var(--border);border-radius:12px;padding:14px;
+      overflow-x:auto;margin:12px 0;color:#c7d2fe}
+  .note{border-radius:12px;padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid}
+  .note.tip{background:rgba(56,189,248,.07);border-color:rgba(56,189,248,.35)}
+  .note.warn{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.4)}
+  .note.danger{background:rgba(248,113,113,.07);border-color:rgba(248,113,113,.4)}
+  .note.ok{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.35)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .card .ic{font-size:20px;margin-bottom:6px}
+  .card b{display:block;margin-bottom:4px}
+  .card small{color:var(--muted)}
+  .footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+       padding:3px 9px;border-radius:999px;margin-bottom:8px}
+  .tag.a{background:rgba(99,102,241,.15);color:#a5b4fc}
+  .tag.u{background:rgba(52,211,153,.15);color:var(--green)}
+  @media(max-width:860px){nav{display:none}main{padding:28px 20px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="logo"><span>⇪</span> BatchPilot</div>
+  <div class="sub">User Guide · Feature Documentation</div>
+  <h4>Overview</h4>
+  <a href="#intro">🏠 Introduction</a>
+  <a href="#login">🔐 Signing In</a>
+  <h4>Core Flow · Spreadsheet → API</h4>
+  <a href="#modes">1 · Choose Destination</a>
+  <a href="#custom">2 · Custom API Setup</a>
+  <a href="#mapping">3 · Column Mapping</a>
+  <a href="#validate">4 · Validation Review</a>
+  <a href="#json">5 · JSON Preview</a>
+  <a href="#send">6 · Send & Confirm</a>
+  <a href="#results">7 · Results & Excel Report</a>
+  <h4>Other Workflows</h4>
+  <a href="#invoices">📦 JSON / ZIP Invoices</a>
+  <a href="#profiles">📁 Saved Profiles</a>
+  <a href="#history">🕘 Job History</a>
+  <h4>Admin</h4>
+  <a href="#admin">⚙️ Deployment & Env Vars</a>
+  <a href="#addprofile">➕ Adding a Profile</a>
+  <h4>Reference</h4>
+  <a href="#notes">📋 Key Notes</a>
+</nav>
+<main>
+
+<div class="tag a">BatchPilot · Feature Documentation</div>
+<h1 id="intro">BatchPilot User Guide</h1>
+<p class="lede">BatchPilot is the safe gateway between spreadsheets and APIs. Upload an Excel/CSV,
+let it validate every row, <b>see the exact JSON</b> that will be sent, push it in batches with
+username/password auth, and download a per-row Excel report of what the API accepted or rejected —
+all from a browser, no coding needed.</p>
+<div class="chips">
+  <span class="chip">⏱️ ~2 min per upload</span>
+  <span class="chip">👥 Non-coders + Admins</span>
+  <span class="chip">🌐 Works in any browser</span>
+  <span class="chip">🧪 Safe Playground included</span>
+</div>
+
+<div class="cards">
+  <div class="card"><div class="ic">✅</div><b>Validates before sending</b>
+    <small>Missing values, bad emails/phones, duplicates, wrong formats — flagged per row, nothing sent until you approve.</small></div>
+  <div class="card"><div class="ic">🔍</div><b>Shows the JSON</b>
+    <small>The exact request body is displayed before and after sending — per batch and per row.</small></div>
+  <div class="card"><div class="ic">📊</div><b>Per-row outcome report</b>
+    <small>Downloadable Excel with original data + validation flags + the API's accept/reject verdict for every row.</small></div>
+</div>
+
+<h2 id="login">🔐 Signing In</h2>
+<p class="lede">The portal is protected by a username/password login page.</p>
+<div class="steps">
+  <div class="step"><div><b>Open the portal URL</b><small>Shared by your admin, e.g. <code>https://batchpilot-xxxx.onrender.com</code></small></div></div>
+  <div class="step"><div><b>Enter your credentials</b><small>Username and password are set by the admin (not your FieldAssist login).</small></div></div>
+  <div class="step"><div><b>You land on New Upload</b><small>Sessions last 12 hours; use <b>Sign out</b> (top-right) on shared computers.</small></div></div>
+</div>
+<div class="note warn">⚠️ <b>Wrong password?</b> Credentials are set by the admin via environment variables — contact them; there is no self-service reset.</div>
+
+<h2 id="modes">Step 1 · Choose Where the Data Goes</h2>
+<p class="lede">Pick your file first (row 1 must be column headers), then choose one of three destinations.</p>
+<table>
+  <tr><th>Mode</th><th>Use when</th><th>What happens</th></tr>
+  <tr><td>🧪 <b>Playground</b></td><td>Learning or demoing the tool</td><td>Sends to a built-in <i>fake</i> API. 100% safe — nothing real is ever touched. It deliberately rejects bad rows so you can see how failures look.</td></tr>
+  <tr><td>🔗 <b>Custom API</b></td><td>Pushing to any real API ad-hoc</td><td>You type the API URL, username, password, batch size. Requires an extra confirmation before sending.</td></tr>
+  <tr><td>📁 <b>Saved profile</b></td><td>Recurring, pre-approved uploads</td><td>Pick a pre-configured destination (e.g. FieldAssist outlet update) — no URLs or credentials to type.</td></tr>
+</table>
+<div class="note tip">💡 <b>First time?</b> Run the Playground once with <code>sample_data/customers.xlsx</code>. Row 2 is intentionally broken — you'll see validation, partial acceptance, and the report in 60 seconds.</div>
+
+<h2 id="custom">Step 2 · Custom API Setup</h2>
+<div class="tag u">User Flow</div>
+<p class="lede">Everything the base automation script needed — now as form fields.</p>
+<table>
+  <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+  <tr><td>API endpoint URL</td><td>Required</td><td>Full <code>https://…</code> address of the bulk API. Internal/private addresses are blocked for safety.</td></tr>
+  <tr><td>Method</td><td>Required</td><td>POST (default), PUT, or PATCH.</td></tr>
+  <tr><td>Batch size</td><td>Required</td><td>Rows per request (default 100, max 2000). FieldAssist bulk APIs accept up to 2000.</td></tr>
+  <tr><td>Delay between batches</td><td>Optional</td><td>Seconds to pause between requests (default 1s) — keeps rate limits happy.</td></tr>
+  <tr><td>API username / password</td><td>Required</td><td>Sent as HTTP Basic auth. Used only for this upload — <b>never stored</b>.</td></tr>
+  <tr><td>Send values as text</td><td>Toggle (on)</td><td>Every value becomes a trimmed string, blanks become <code>null</code> — identical to the original script's behaviour. Recommended for FieldAssist.</td></tr>
+  <tr><td>Wrap records in a key</td><td>Advanced</td><td>Leave blank = body is a bare JSON array <code>[{…},{…}]</code> (default, matches the base script). Enter a key to send <code>{"key": […]}</code> instead.</td></tr>
+  <tr><td>Response mapping</td><td>Advanced</td><td>Tells BatchPilot how to read per-row results from the API's response. Leave defaults if unsure.</td></tr>
+</table>
+
+<h2 id="mapping">Step 3 · Column Mapping (optional)</h2>
+<p class="lede">The moment you pick a file, BatchPilot reads its header row in your browser and fills the
+<b>Advanced: map file columns → API field names</b> table automatically.</p>
+<div class="steps">
+  <div class="step"><div><b>Left column = your file's headers</b><small>Pre-read automatically from the xlsx/csv.</small></div></div>
+  <div class="step"><div><b>Right column = the name the API expects</b><small>Edit freely, e.g. <code>Cust Name</code> → <code>customerName</code>.</small></div></div>
+  <div class="step"><div><b>Blank = skip</b><small>Clear a field to exclude that column from the upload entirely (e.g. internal notes).</small></div></div>
+</div>
+<div class="note tip">💡 If your headers already match the API's field names exactly, skip this section — unchanged names pass through as-is.</div>
+
+<h2 id="validate">Step 4 · Validation Review</h2>
+<p class="lede">Click <b>Validate file</b>. Nothing is sent yet — you land on the review page.</p>
+<div class="cards">
+  <div class="card"><div class="ic">🔴</div><b>Errors (red rows)</b><small>Missing required values, invalid emails/phones, non-numeric quantities, out-of-range values. Held back by default when sending.</small></div>
+  <div class="card"><div class="ic">🟡</div><b>Warnings (yellow rows)</b><small>Duplicates, over-length text. Sent anyway — but flagged for your judgement.</small></div>
+  <div class="card"><div class="ic">🟢</div><b>Clean rows</b><small>Marked ✓ clean. Ready to go.</small></div>
+</div>
+<p>The four tiles at the top summarize: total rows, rows with errors, rows with warnings, and batch size.</p>
+
+<h2 id="json">Step 5 · JSON Preview</h2>
+<p class="lede">The <b>"JSON being sent"</b> panel shows the exact request body the API will receive —
+bare array or wrapped, stringified or typed, first records of the first batch — plus the endpoint it goes to.</p>
+<pre>[
+  {
+    "ProductERPId": "SKU-1001",
+    "Price": "249.50",
+    "MRP": "299.00"
+  },
+  ...
+]</pre>
+<p>Need row-level detail? Every row in the table has a <code>{ }</code> toggle that expands to that row's individual JSON.</p>
+<div class="note ok">✅ What you see is byte-for-byte what gets sent. If the JSON looks wrong, fix the mapping or the file — before anything leaves the building.</div>
+
+<h2 id="send">Step 6 · Send & Confirm</h2>
+<div class="steps">
+  <div class="step"><div><b>Hold back rows with errors</b><small>Ticked by default — broken rows stay behind, clean rows go.</small></div></div>
+  <div class="step"><div><b>Confirmation checkbox (Custom API only)</b><small>"I understand this sends real data to &lt;endpoint&gt;" — required before the button works.</small></div></div>
+  <div class="step"><div><b>Click Send</b><small>Batches go out with your batch size, delay, and automatic retry on server errors (429/5xx). Double-clicks and duplicate tabs are guarded — a job can only be sent once.</small></div></div>
+</div>
+
+<h2 id="results">Step 7 · Results & Excel Report</h2>
+<p class="lede">After sending, every row shows its individual verdict.</p>
+<table>
+  <tr><th>Outcome</th><th>Meaning</th></tr>
+  <tr><td>✓ <b style="color:var(--green)">accepted</b></td><td>The API accepted this row.</td></tr>
+  <tr><td>✗ <b style="color:var(--red)">rejected</b></td><td>The API refused it — the reason (e.g. <i>"Beat not found"</i>, <i>"Duplicate ErpInvoiceNo"</i>) is shown inline.</td></tr>
+  <tr><td>— <b>held back</b></td><td>Never sent, because it had validation errors and "hold back" was ticked.</td></tr>
+</table>
+<p><b>⬇ Download Excel report</b> gives you a color-coded workbook: original data + validation flags + API status + API message, one row per row. Share it, fix the failures, re-upload just those.</p>
+<div class="note warn">⚠️ <b>Partial acceptance is normal.</b> APIs like FieldAssist can accept 950 of 1000 rows. BatchPilot maps each per-record result (keyed by ERP ID) back to your original spreadsheet rows.</div>
+
+<h2 id="invoices">📦 JSON / ZIP Invoice Workflow</h2>
+<p class="lede">For pre-built JSON payloads (like DMS invoices), skip spreadsheets entirely.</p>
+<div class="steps">
+  <div class="step"><div><b>Upload a .zip of .json files</b><small>Or a single .json (object or array). Each file/entry = one API request.</small></div></div>
+  <div class="step"><div><b>Review the file list</b><small>Each payload shows its top-level keys; broken JSON is flagged red before anything is sent.</small></div></div>
+  <div class="step"><div><b>Send</b><small>One request per payload, 0.3s apart (DMS profile), with retry. Per-file ✓/✗ plus the API's error text, and the same Excel report.</small></div></div>
+</div>
+<div class="note tip">💡 This replaces the "GRN Update" Colab notebook: same behaviour, plus validation, audit history, and a report — and credentials stay out of the code.</div>
+
+<h2 id="profiles">📁 Saved Profiles (bundled)</h2>
+<table>
+  <tr><th>Profile</th><th>Endpoint</th><th>Notes</th></tr>
+  <tr><td>Demo (built-in mock API)</td><td><code>/mock/ingest</code></td><td>Playground target. No credentials.</td></tr>
+  <tr><td>FieldAssist · Outlet create</td><td><code>api/V3/Outlet/CreateMultiple</code></td><td>Required: OutletName, Beat, Address, MarketName, City. Per-row results by ERPId.</td></tr>
+  <tr><td>FieldAssist · Outlet update</td><td><code>api/V3/Outlet/UpdateMultiple</code></td><td>Also requires OutletErpId. PAN/Aadhar/pincode format checks built in.</td></tr>
+  <tr><td>FieldAssist · Product price update</td><td><code>api/V3/Product/UpdatePrice</code></td><td>By ProductERPId; non-negative price checks.</td></tr>
+  <tr><td>FieldAssist DMS · Invoice upload</td><td><code>api/salesinvoice/SaveInvoicesV2</code></td><td>JSON/ZIP workflow, one invoice per request.</td></tr>
+</table>
+<div class="note warn">⚠️ Spreadsheet headers must match the API's field names exactly (e.g. <code>OutletErpId</code>, not <code>Outlet ERP</code>) when using saved profiles. Use Custom API mode's mapping table if your file differs.</div>
+
+<h2 id="history">🕘 Job History</h2>
+<p class="lede">Every upload — by any user — is logged. Click a job ID to reopen its full review/results page and re-download its report. Columns: file, profile, rows, errors, status (validated/sent), accepted count, and whether AI validation ran.</p>
+
+<h2 id="admin">⚙️ Admin · Deployment & Environment Variables</h2>
+<div class="tag a">Admin</div>
+<p class="lede">One-time setup. Full walkthrough lives in <code>STEPS.md</code> in the repository.</p>
+<table>
+  <tr><th>Variable</th><th>Required</th><th>Purpose</th></tr>
+  <tr><td><code>BATCHPILOT_USERNAME</code></td><td>Yes</td><td>Portal login username (default <code>admin</code> — change it).</td></tr>
+  <tr><td><code>BATCHPILOT_PASSWORD</code></td><td>Yes</td><td>Portal login password (default <code>batchpilot</code> — change it).</td></tr>
+  <tr><td><code>BATCHPILOT_SECRET</code></td><td>Yes</td><td>Long random string; keeps login sessions valid across restarts.</td></tr>
+  <tr><td><code>FA_USERNAME</code> / <code>FA_PASSWORD</code></td><td>For FA profiles</td><td>FieldAssist V3 API credentials.</td></tr>
+  <tr><td><code>FA_DMS_USERNAME</code> / <code>FA_DMS_PASSWORD</code></td><td>For DMS profile</td><td>FieldAssist DMS credentials.</td></tr>
+  <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Optional</td><td>Enables AI semantic validation. Absent = rule-based only (fully functional).</td></tr>
+</table>
+<div class="note danger">🚨 Never commit credentials to GitHub or paste them into scripts/notebooks. Profiles reference <code>${ENV_VARS}</code> precisely so the public repo stays clean.</div>
+
+<h2 id="addprofile">➕ Admin · Adding a New Saved Profile</h2>
+<div class="steps">
+  <div class="step"><div><b>Copy a template</b><small><code>profiles/example-real-api.yaml</code> → <code>profiles/my-api.yaml</code></small></div></div>
+  <div class="step"><div><b>Fill in the API contract</b><small>endpoint, method, headers/auth (env vars), records_key ("" = bare array), batch_size, delay.</small></div></div>
+  <div class="step"><div><b>Declare field rules</b><small>required / type (email, phone, number, date) / regex / min–max / unique per column.</small></div></div>
+  <div class="step"><div><b>Map the response</b><small>Where per-record results live, which field is the status, and how to match results to rows (index or ID value).</small></div></div>
+  <div class="step"><div><b>Commit & push</b><small>The profile appears in the dropdown automatically after redeploy (~3 min).</small></div></div>
+</div>
+
+<h2 id="notes">📋 Key Notes & Considerations</h2>
+<div class="cards">
+  <div class="card"><div class="ic">😴</div><b>Free hosting sleeps</b><small>After idle time the first visit takes ~30–60s to wake. Job history resets when the server restarts — downloaded reports are yours forever.</small></div>
+  <div class="card"><div class="ic">1️⃣</div><b>One send per job</b><small>A job can only be sent once — re-upload the file to send again. Double-clicks are guarded.</small></div>
+  <div class="card"><div class="ic">👥</div><b>Multi-user safe</b><small>Simultaneous uploads by different people don't interfere; each job is isolated.</small></div>
+  <div class="card"><div class="ic">🧪</div><b>Test small first</b><small>Before any real bulk push, send a 2–3 row file and check the per-row results.</small></div>
+  <div class="card"><div class="ic">🔐</div><b>Credentials are per-upload</b><small>Custom API usernames/passwords are used for that job's requests and never written to disk.</small></div>
+  <div class="card"><div class="ic">📅</div><b>Whole-batch vs per-row</b><small>If an API returns no per-record detail, all rows in a batch share one outcome — the report says which.</small></div>
+</div>
+
+<div class="footer">
+  <b>BatchPilot</b> · Built by Mudit Kumar Jain · Flick2Know Technologies ·
+  Open source under MIT License · Questions? Open an issue on the GitHub repository.
+</div>
+</main>
+</div>
+</body>
+</html>
