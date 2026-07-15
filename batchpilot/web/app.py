@@ -46,11 +46,17 @@ USING_DEFAULT_CREDS = "BATCHPILOT_PASSWORD" not in os.environ
 # API and is called server-to-server (no cookies) by the sender.
 _PUBLIC_PATHS = ("/login", "/health", "/mock/ingest")
 
+# Public landing page: the project-story presentation. Shown to logged-out
+# visitors at "/"; its "Live Demo" button links to /login.
+_PRESENTATION_PATH = Path(__file__).resolve().parents[2] / "docs" / "presentation.html"
+
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
     path = request.url.path
     if path not in _PUBLIC_PATHS and not request.session.get("user"):
+        if path == "/" and _PRESENTATION_PATH.exists():
+            return FileResponse(_PRESENTATION_PATH, media_type="text/html")
         return RedirectResponse(f"/login?next={path}", status_code=303)
     return await call_next(request)
 
