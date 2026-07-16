@@ -57,7 +57,10 @@ async def require_login(request: Request, call_next):
     if path not in _PUBLIC_PATHS and not request.session.get("user"):
         if path == "/" and _PRESENTATION_PATH.exists():
             return FileResponse(_PRESENTATION_PATH, media_type="text/html")
-        return RedirectResponse(f"/login?next={path}", status_code=303)
+        # Only send users back to pages that can be GET-loaded after login;
+        # POST-only paths (like /upload) would 405.
+        nxt = path if request.method == "GET" else "/"
+        return RedirectResponse(f"/login?next={nxt}", status_code=303)
     return await call_next(request)
 
 
@@ -86,7 +89,10 @@ def login_submit(request: Request, username: str = Form(...),
             "next": next, "default_creds": USING_DEFAULT_CREDS,
             "error": "Wrong username or password."}, status_code=401)
     request.session["user"] = username
-    return RedirectResponse(next if next.startswith("/") else "/", status_code=303)
+    # Never land on POST-only endpoints; default to the app home.
+    safe_next = next if (next.startswith("/") and not next.startswith("//")
+                         and next not in ("/upload", "/login")) else "/"
+    return RedirectResponse(safe_next, status_code=303)
 
 
 @app.get("/logout")
